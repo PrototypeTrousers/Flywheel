@@ -32,8 +32,8 @@ public class ModelData extends BasicData implements Transform<ModelData> {
 	public ModelData setEmptyTransform() {
 		markDirty();
 
-		this.model.set(new Matrix4f());
-		this.normal.set(new Matrix3f());
+		this.model.zero();
+		this.normal.zero();
 		return this;
 	}
 

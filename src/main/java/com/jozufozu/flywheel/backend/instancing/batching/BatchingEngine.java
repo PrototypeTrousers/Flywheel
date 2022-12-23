@@ -52,7 +52,7 @@ public class BatchingEngine implements Engine {
 
 		// FIXME: this probably breaks some vanilla stuff but it works much better for flywheel
 		Matrix4f mat = new Matrix4f();
-		mat.identity();
+
 		if (event.getWorld().effects().constantAmbientLight()) {
 			Lighting.setupNetherLevel(mat);
 		} else {
