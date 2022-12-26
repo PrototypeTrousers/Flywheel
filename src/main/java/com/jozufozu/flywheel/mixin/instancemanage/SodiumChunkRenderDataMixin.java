@@ -18,7 +18,7 @@ import me.jellysquid.mods.sodium.client.render.chunk.data.ChunkRenderData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-@Mixin(targets = "me.jellysquid.mods.sodium.client.render.chunk.data.ChunkRenderData$Builder", remap = false)
+@Mixin(value = ChunkRenderData.Builder.class, remap = false)
 public class SodiumChunkRenderDataMixin {
 
 	@Unique
