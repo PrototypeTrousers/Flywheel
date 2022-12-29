@@ -1,15 +1,20 @@
 package com.jozufozu.flywheel.backend.instancing.instancing;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import com.jozufozu.flywheel.api.vertex.VertexType;
+import com.jozufozu.flywheel.core.vertex.BlockVertex;
+
+import org.joml.Matrix4f;
 
 import com.jozufozu.flywheel.api.InstanceData;
 import com.jozufozu.flywheel.api.MaterialGroup;
 import com.jozufozu.flywheel.api.struct.Instanced;
 import com.jozufozu.flywheel.api.struct.StructType;
 import com.jozufozu.flywheel.backend.RenderLayer;
-import com.jozufozu.flywheel.backend.gl.versioned.GlCompat;
-import com.jozufozu.flywheel.backend.model.FallbackAllocator;
 import com.jozufozu.flywheel.backend.model.ModelAllocator;
 import com.jozufozu.flywheel.backend.model.ModelPool;
 import com.jozufozu.flywheel.core.Formats;
@@ -18,8 +23,6 @@ import com.jozufozu.flywheel.core.shader.WorldProgram;
 import com.jozufozu.flywheel.util.Textures;
 
 import net.minecraft.client.renderer.RenderType;
-
-import org.joml.Matrix4f;
 
 /**
  * A group of materials all rendered with the same GL state.
@@ -34,7 +37,9 @@ public class InstancedMaterialGroup<P extends WorldProgram> implements MaterialG
 
 	private final Map<Instanced<? extends InstanceData>, InstancedMaterial<?>> materials = new HashMap<>();
 
-	private ModelAllocator allocator;
+	private ModelAllocator blockAllocator;
+	private ModelAllocator partAllocator;
+
 	private int vertexCount;
 	private int instanceCount;
 
@@ -94,36 +99,49 @@ public class InstancedMaterialGroup<P extends WorldProgram> implements MaterialG
 			InstancedMaterial<?> material = entry.getValue();
 			if (material.nothingToRender()) continue;
 
-			P program = owner.context.getProgram(ProgramContext.create(entry.getKey()
-					.getProgramSpec(), Formats.POS_TEX_NORMAL, layer));
+			List<VertexType> formats = new ArrayList<>();
+			formats.add(Formats.BLOCK);
+			formats.add(Formats.POS_TEX_NORMAL);
 
-			// XXX Shader is bound and not reset or restored
-			program.bind();
-			program.uploadViewProjection(viewProjection);
-			program.uploadCameraPos(camX, camY, camZ);
+			for (VertexType v : formats) {
+				P program = owner.context.getProgram(ProgramContext.create(entry.getKey()
+						.getProgramSpec(), v, layer));
 
-			setup(program);
+				// XXX Shader is bound and not reset or restored
+				program.bind();
+				program.uploadViewProjection(viewProjection);
+				program.uploadCameraPos(camX, camY, camZ);
 
-			for (GPUInstancer<?> instancer : material.getAllInstancers()) {
-				instancer.render(); // XXX May change VAO binding (not reset), ARRAY_BUFFER binding (reset)
-				vertexCount += instancer.getVertexCount();
-				instanceCount += instancer.getInstanceCount();
+				setup(program);
+
+
+				for (GPUInstancer<?> instancer : material.getAllInstancersOfType(v)) {
+					instancer.render(); // XXX May change VAO binding (not reset), ARRAY_BUFFER binding (reset)
+					vertexCount += instancer.getVertexCount();
+					instanceCount += instancer.getInstanceCount();
+				}
 			}
 		}
 	}
 
 	private void initializeInstancers() {
-		ModelAllocator allocator = getModelAllocator(); // XXX May change ARRAY_BUFFER binding (not reset)
+		ModelAllocator blockA = getBlockAllocator(); // XXX May change ARRAY_BUFFER binding (not reset)
+		ModelAllocator partA = getPartAllocator();
 
 		// initialize all uninitialized instancers...
 		for (InstancedMaterial<?> material : materials.values()) {
 			for (GPUInstancer<?> instancer : material.uninitialized) {
-				instancer.init(allocator); // XXX May change VAO binding (not reset), ARRAY_BUFFER binding (not reset), call Model.createEBO
+				instancer.init(blockA); // XXX May change VAO binding (not reset), ARRAY_BUFFER binding (not reset), call Model.createEBO
+				instancer.init(partA);
 			}
 			material.uninitialized.clear();
 		}
 
-		if (allocator instanceof ModelPool pool) {
+		if (blockA instanceof ModelPool pool) {
+			// ...and then flush the model arena in case anything was marked for upload
+			pool.flush(); // XXX May change ARRAY_BUFFER binding (reset)
+		}
+		if (partA instanceof ModelPool pool) {
 			// ...and then flush the model arena in case anything was marked for upload
 			pool.flush(); // XXX May change ARRAY_BUFFER binding (reset)
 		}
@@ -140,23 +158,28 @@ public class InstancedMaterialGroup<P extends WorldProgram> implements MaterialG
 	public void delete() {
 		materials.values()
 				.forEach(InstancedMaterial::delete);
-
 		materials.clear();
 	}
 
-	private ModelAllocator getModelAllocator() {
-		if (allocator == null) {
-			allocator = createAllocator();
+	private ModelAllocator getBlockAllocator() {
+		if (blockAllocator == null) {
+			blockAllocator = createBlockAllocator();
 		}
-		return this.allocator;
+		return this.blockAllocator;
 	}
 
-	private static ModelAllocator createAllocator() {
-		if (GlCompat.getInstance()
-				.onAMDWindows()) {
-			return FallbackAllocator.INSTANCE;
-		} else {
-			return new ModelPool(Formats.POS_TEX_NORMAL);
+	private ModelAllocator getPartAllocator() {
+		if (partAllocator == null) {
+			partAllocator = createPartAllocator();
 		}
+		return this.partAllocator;
+	}
+
+	private static ModelAllocator createPartAllocator() {
+		return new ModelPool(Formats.POS_TEX_NORMAL);
+	}
+
+	private static ModelAllocator createBlockAllocator() {
+		return new ModelPool(Formats.BLOCK);
 	}
 }

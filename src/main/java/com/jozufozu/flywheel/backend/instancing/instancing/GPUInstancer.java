@@ -64,6 +64,8 @@ public class GPUInstancer<D extends InstanceData> extends AbstractInstancer<D> {
 
 	public void init(ModelAllocator modelAllocator) {
 		if (isInitialized()) return;
+		if(modelData.getType() != modelAllocator.getVertexType())
+			return;
 
 		initialized = true;
 

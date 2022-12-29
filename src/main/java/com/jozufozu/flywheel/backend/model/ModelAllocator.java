@@ -1,5 +1,6 @@
 package com.jozufozu.flywheel.backend.model;
 
+import com.jozufozu.flywheel.api.vertex.VertexType;
 import com.jozufozu.flywheel.core.model.Model;
 
 public interface ModelAllocator {
@@ -15,4 +16,6 @@ public interface ModelAllocator {
 	interface Callback {
 		void onAlloc(BufferedModel arenaModel);
 	}
+
+	VertexType getVertexType();
 }

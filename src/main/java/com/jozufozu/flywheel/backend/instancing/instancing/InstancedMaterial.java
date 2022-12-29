@@ -11,6 +11,7 @@ import com.jozufozu.flywheel.api.InstanceData;
 import com.jozufozu.flywheel.api.Instancer;
 import com.jozufozu.flywheel.api.Material;
 import com.jozufozu.flywheel.api.struct.Instanced;
+import com.jozufozu.flywheel.api.vertex.VertexType;
 import com.jozufozu.flywheel.core.model.Model;
 
 /**
@@ -70,7 +71,7 @@ public class InstancedMaterial<D extends InstanceData> implements Material<D> {
 				.forEach(GPUInstancer::clear);
 	}
 
-	public Collection<GPUInstancer<D>> getAllInstancers() {
-		return models.values();
+	public Collection<GPUInstancer<D>> getAllInstancersOfType(VertexType vertexType) {
+		return models.values().stream().filter(i-> i.getModelVertexType() == vertexType).toList();
 	}
 }

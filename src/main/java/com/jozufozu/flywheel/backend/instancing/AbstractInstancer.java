@@ -6,6 +6,7 @@ import java.util.function.Supplier;
 
 import com.jozufozu.flywheel.api.InstanceData;
 import com.jozufozu.flywheel.api.Instancer;
+import com.jozufozu.flywheel.api.vertex.VertexType;
 import com.jozufozu.flywheel.core.model.Model;
 
 public abstract class AbstractInstancer<D extends InstanceData> implements Instancer<D> {
@@ -60,6 +61,10 @@ public abstract class AbstractInstancer<D extends InstanceData> implements Insta
 
 	public int getModelVertexCount() {
 		return modelData.vertexCount();
+	}
+
+	public VertexType getModelVertexType() {
+		return modelData.getType();
 	}
 
 	public int getInstanceCount() {

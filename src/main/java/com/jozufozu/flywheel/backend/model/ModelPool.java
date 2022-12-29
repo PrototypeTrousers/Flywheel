@@ -55,6 +55,9 @@ public class ModelPool implements ModelAllocator {
 	 */
 	@Override
 	public PooledModel alloc(Model model, Callback callback) {
+		if (model.getType() != this.vertexType) {
+			throw new RuntimeException();
+		}
 		PooledModel bufferedModel = new PooledModel(model, vertices);
 		bufferedModel.callback = callback;
 		vertices += model.vertexCount();
@@ -63,6 +66,11 @@ public class ModelPool implements ModelAllocator {
 
 		setDirty();
 		return bufferedModel;
+	}
+
+	@Override
+	public VertexType getVertexType() {
+		return vertexType;
 	}
 
 	public void flush() {
